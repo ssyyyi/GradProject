@@ -4,12 +4,10 @@ import 'dart:convert';
 import 'config.dart';
 
 class StyleSelectorScreen extends StatefulWidget {
-  final String imageUrl;
   final String userId;
 
   const StyleSelectorScreen({
     super.key,
-    required this.imageUrl,
     required this.userId,
   });
 
@@ -42,7 +40,7 @@ class StyleSelectorScreenState extends State<StyleSelectorScreen> {
 
   Future<void> sendSelectedStylesToServer(
       String userId, List<String> styles) async {
-    const String apiUrl = "$serverUrl/closet/styles";
+    const String apiUrl = "$serverUrl/auth/prefer";
 
     try {
       final response = await http.post(
@@ -50,12 +48,11 @@ class StyleSelectorScreenState extends State<StyleSelectorScreen> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "userId": userId,
-          "imageUrl": widget.imageUrl,
-          "styles": styles,
+          "prefer": styles,
         }),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200) {
         print("스타일 데이터 전송 성공: ${response.body}");
       } else {
         print("스타일 데이터 전송 실패: ${response.statusCode}");

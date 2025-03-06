@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:wearly/selected_style.dart';
 import 'dart:convert';
 import 'config.dart';
 
@@ -59,7 +60,6 @@ class _AuthViewState extends State<AuthView> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.of(context).pop(); // 성공 후 이전 화면으로 이동
             },
             child: const Text('확인'),
           ),
@@ -67,6 +67,7 @@ class _AuthViewState extends State<AuthView> {
       ),
     );
   }
+
 
   Future<void> _registerUser() async {
     if (emailController.text.isEmpty) {
@@ -116,7 +117,18 @@ class _AuthViewState extends State<AuthView> {
     );
 
     if (response.statusCode == 201) {
-      _showSuccessDialog('회원가입이 완료되었습니다.');
+      final String userEmail = emailController.text;
+
+      print('회원가입 성공: $userEmail');
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => StyleSelectorScreen(
+            userId: userEmail,
+          ),
+        ),
+      );
     } else {
       _showErrorDialog('회원가입 실패: ${response.body}');
     }

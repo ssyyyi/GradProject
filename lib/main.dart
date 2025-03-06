@@ -5,10 +5,24 @@ import 'package:wearly/signup.dart';
 import 'package:wearly/login.dart';
 import 'package:wearly/selected_style.dart';
 
-void main() {
+
+//import 'package:provider/provider.dart';
+//import 'closet_provider.dart';
+
+// void main() {
+//   runApp(
+//     MultiProvider(
+//       providers: [
+//         ChangeNotifierProvider(create: (_) => ClosetProvider()),
+//       ],
+//       child: const MyApp(),
+//     ),
+//   );
+// }
+
+void main() async {
   runApp(const MyApp());
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

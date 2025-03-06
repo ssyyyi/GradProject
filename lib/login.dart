@@ -60,7 +60,7 @@ class _LoginViewState extends State<LoginView> {
       final Map<String, dynamic> responseData = json.decode(response.body);
       final String userId = responseData['user_id'];
 
-      // 홈 화면으로 이동하면서 사용자 ID와 이미지를 전달
+      // 홈 화면으로 이동하면서 사용자 ID를 전달
       Navigator.pushReplacementNamed(
         context,
         '/home',
@@ -116,10 +116,10 @@ class _LoginViewState extends State<LoginView> {
                 child: Center(
                   child: isLoading
                       ? const CircularProgressIndicator(
-                          color: Colors.white,
-                        )
+                    color: Colors.white,
+                  )
                       : const Text('로그인하기',
-                          style: TextStyle(color: Colors.white)),
+                      style: TextStyle(color: Colors.white)),
                 ),
               ),
             ),

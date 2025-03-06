@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wearly/3d_model.dart';
 import 'package:wearly/chatbot.dart';
 //import 'package:wearly/closet_content_screen.dart';
 import 'package:wearly/closet_tab.dart';
@@ -47,7 +48,7 @@ class SmartClosetUI extends StatelessWidget {
               //onBack: () => Navigator.pop(context),
               userId: userId,
             ), // 옷장 화면
-            WeatherClothingRecommendation(userId: userId), // 스타일 추천 화면
+            ModelLoad(), // 스타일 추천 화면
             const ChatbotScreen(), // 챗봇 화면
           ],
         ),

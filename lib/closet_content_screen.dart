@@ -19,7 +19,7 @@ class ClosetContentScreen extends StatefulWidget {
 
 class _ClosetContentScreenState extends State<ClosetContentScreen> {
   final WebSocketChannel _channel =
-      WebSocketChannel.connect(Uri.parse('ws://172.20.40.210:3000')); // 서버 연결
+      WebSocketChannel.connect(Uri.parse('ws://http://172.20.40.38:3000')); // 서버 연결
   final List<String> _clothingImages = [];
   bool isClosetOpen = false;
 

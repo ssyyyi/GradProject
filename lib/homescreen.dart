@@ -5,9 +5,12 @@ import 'package:wearly/remove_back.dart';
 import 'package:wearly/selected_style.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:provider/provider.dart';
+import 'package:wearly/state_management/closet_provider.dart';
+//import 'closet_provider.dart';
 
 class HomeScreen extends StatefulWidget {
-  final String userId; // 사용자 ID를 받는 필드 추가
+  final String userId;
 
   const HomeScreen({super.key, required this.userId,});
 
@@ -18,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final List<String> _uploadedImages = [];
+  final List<String> _predictedStyles = [];
   final ImagePicker _picker = ImagePicker();
   final RemoveBgService _removeBgService = RemoveBgService();
 
@@ -28,28 +32,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   Future<void> _pickImage(ImageSource source) async {
+    //final closetProvider = Provider.of<ClosetProvider>(context, listen: false);
     final XFile? pickedFile = await _picker.pickImage(source: source);
     if (pickedFile != null) {
       File imageFile = File(pickedFile.path);
+      //상태관리 되면 아래 지워도 됨
       setState(() {
         _uploadedImages.add(imageFile.path);
       });
 
-      String? resultUrl = await _removeBgService.removeBackground(imageFile);
-      if (resultUrl != null) {
+      Map<String, String>? result = await _removeBgService.removeBackground(imageFile, widget.userId);
+      if (result != null) {
+        //closetProvider.addImage(result['bg_removed_image_url']!, result['predicted_style']!);
+        //상태관리 되면 아래 setState 부분 지워도 됨
         setState(() {
-          _uploadedImages[_uploadedImages.length - 1] = resultUrl;
+          _uploadedImages[_uploadedImages.length - 1] = result['bg_removed_image_url']!;
+          _predictedStyles.add(result['predicted_style']!);
         });
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) => StyleSelectorScreen(
+        //       imageUrl: result['bg_removed_image_url']!,
+        //       predictedStyle: result['predicted_style']!, // 스타일 정보 추가 전달
+        //       userId: widget.userId,
+        //     ),
+        //   ),
+        // );
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => StyleSelectorScreen(
-              imageUrl: resultUrl,
-              userId: widget.userId, // 전달된 userId를 StyleSelectorScreen에 전달
-            ),
-          ),
-        );
       }
     }
   }
@@ -85,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-
+  //상태관리 되면 아래 지워도 됨
   void _removeImage(int index) {
     setState(() {
       _uploadedImages.removeAt(index);
@@ -94,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    //final closetProvider = Provider.of<ClosetProvider>(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('WEarly'),
@@ -107,8 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
             ),
+            //itemCount: closetProvider.uploadedImages.length,
             itemCount: _uploadedImages.length,
             itemBuilder: (context, index) {
+              //var image = closetProvider.uploadedImages[index];
               var image = _uploadedImages[index];
               return Stack(
                 fit: StackFit.expand,
@@ -120,6 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     top: 5,
                     right: 5,
                     child: GestureDetector(
+                      //onTap: () => closetProvider.removeImage(index),
                       onTap: () => _removeImage(index),
                       child: const Icon(Icons.remove_circle,
                           color: Colors.red),

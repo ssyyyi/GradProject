@@ -53,10 +53,7 @@ class _WeatherClothingRecommendationState
     }
 
     // 현재 위치 가져오기
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-      timeLimit: const Duration(seconds: 20),
-    );
+    return await Geolocator.getCurrentPosition();
   }
 
   // 날씨 및 옷 데이터를 서버에서 가져오기

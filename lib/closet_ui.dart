@@ -14,13 +14,14 @@ class SmartClosetApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: SmartClosetUI(),
+      home: SmartClosetUI(userId: '',),
     );
   }
 }
 
 class SmartClosetUI extends StatefulWidget {
-  const SmartClosetUI({super.key, required String userId});
+  final String userId;
+  const SmartClosetUI({super.key, required this.userId});
 
   @override
   _SmartClosetUIState createState() => _SmartClosetUIState();
@@ -46,6 +47,8 @@ class _SmartClosetUIState extends State<SmartClosetUI>
         curve: Curves.easeInOut,
       ),
     );
+    // 유저 아이디를 확인하는 로그 추가
+    print("로그인한 유저 ID: ${widget.userId}");
   }
 
   @override
@@ -72,7 +75,7 @@ class _SmartClosetUIState extends State<SmartClosetUI>
                   isClosetOpen = false;
                   _controller.reverse();
                 });
-              },
+              }, userId: widget.userId,
             ),
           ),
         );
@@ -107,9 +110,10 @@ class _SmartClosetUIState extends State<SmartClosetUI>
 
 class ClosetContentScreen extends StatefulWidget {
   final VoidCallback onBack;
+  final String userId;
 
   const ClosetContentScreen(
-      {super.key, required this.onBack, required String userId});
+      {super.key, required this.onBack, required this.userId,});
 
   @override
   State<ClosetContentScreen> createState() => _ClosetContentScreenState();
@@ -117,13 +121,16 @@ class ClosetContentScreen extends StatefulWidget {
 
 class _ClosetContentScreenState extends State<ClosetContentScreen> {
   final WebSocketChannel _channel =
-      WebSocketChannel.connect(Uri.parse('ws://172.20.40.21:3001')); // 서버 연결
+      WebSocketChannel.connect(Uri.parse('ws://0f01-61-40-226-235.ngrok-free.app')); // 서버 연결
   final List<String> _clothingImages = [];
 
   @override
   void initState() {
     super.initState();
     _listenForUpdates();
+
+    // 디버깅: userId 확인
+    print("ClosetContentScreen에 전달된 유저 ID: ${widget.userId}");
   }
 
   @override

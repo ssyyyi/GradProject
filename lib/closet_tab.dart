@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'config.dart'; // 서버 URL이 설정된 파일
+import 'config.dart';
 
 class ClosetContentScreen extends StatefulWidget {
   final String userId;
@@ -20,7 +20,7 @@ class _ClosetContentScreenState extends State<ClosetContentScreen> {
   @override
   void initState() {
     super.initState();
-    fetchClothingItems(); // 초기 데이터를 가져옵니다.
+    fetchClothingItems();
   }
 
   // 서버에서 옷장 데이터를 가져오는 함수
@@ -29,14 +29,15 @@ class _ClosetContentScreenState extends State<ClosetContentScreen> {
 
     try {
       final response = await http.get(Uri.parse(apiUrl));
-      print('Server Response: ${response.body}'); // 디버깅용
+      print('Server Response: ${response.body}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
         if (responseData['success'] == true) {
           setState(() {
-            clothingItems = List<Map<String, dynamic>>.from(responseData['data']);
+            clothingItems =
+                List<Map<String, dynamic>>.from(responseData['data']);
             isLoading = false;
           });
         } else {
@@ -46,7 +47,8 @@ class _ClosetContentScreenState extends State<ClosetContentScreen> {
           print('Error: ${responseData['error']}');
         }
       } else {
-        throw Exception('Failed to fetch data. Status code: ${response.statusCode}');
+        throw Exception(
+            'Failed to fetch data. Status code: ${response.statusCode}');
       }
     } catch (e) {
       print('Error fetching clothing items: $e');
@@ -73,52 +75,70 @@ class _ClosetContentScreenState extends State<ClosetContentScreen> {
       body: Center(
         child: isClosetOpen
             ? isLoading
-            ? const CircularProgressIndicator() // 로딩 상태
-            : clothingItems.isEmpty
-            ? const Text(
-          "옷 리스트가 없습니다.",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
-        )
-            : GridView.builder(
-          padding: const EdgeInsets.all(10),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, // 한 행에 3개씩 표시
-            crossAxisSpacing: 10, // 열 간 간격
-            mainAxisSpacing: 10, // 행 간 간격
-            childAspectRatio: 0.75, // 이미지 비율 (너비:높이)
-          ),
-          itemCount: clothingItems.length,
-          itemBuilder: (context, index) {
-            final item = clothingItems[index];
-            return Column(
-              children: [
-                Expanded(
-                  child: Image.network(
-                    item['image_url'], // 이미지 URL
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  item['category'] ?? '',
-                  style: const TextStyle(fontSize: 12),
-                  overflow: TextOverflow.ellipsis, // 긴 텍스트 잘라내기
-                ),
-              ],
-            );
-          },
-        )
+                ? const CircularProgressIndicator()
+                : RefreshIndicator(
+                    // 새로고침 기능 추가
+                    onRefresh: fetchClothingItems,
+                    child: clothingItems.isEmpty
+                        ? ListView(
+                            // RefreshIndicator는 반드시 Scrollable 위젯을 포함해야 함
+                            children: const [
+                              Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Text(
+                                    "옷 리스트가 없습니다.",
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w400),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : GridView.builder(
+                            padding: const EdgeInsets.all(10),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 0.75, // 이미지 비율 (너비:높이)
+                            ),
+                            itemCount: clothingItems.length,
+                            itemBuilder: (context, index) {
+                              final item = clothingItems[index];
+                              return Column(
+                                children: [
+                                  Expanded(
+                                    child: Image.network(
+                                      item['image_url'],
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    item['category'] ?? '',
+                                    style: const TextStyle(fontSize: 12),
+                                    overflow:
+                                        TextOverflow.ellipsis, // 긴 텍스트 잘라내기
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                  )
             : GestureDetector(
-          onTap: toggleCloset, // Closet 열기
-          child: Image.asset(
-            'assets/images/closet.png', // 닫힌 옷장 이미지
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            fit: BoxFit.contain,
-          ),
-        ),
+                onTap: toggleCloset,
+                child: Image.asset(
+                  'assets/images/closet.png',
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height,
+                  fit: BoxFit.contain,
+                ),
+              ),
       ),
     );
   }

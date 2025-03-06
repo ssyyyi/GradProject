@@ -41,8 +41,16 @@ dependencies:
   googleapis: ^13.2.0
   googleapis_auth: ^1.0.0
   socket_io_client: ^2.0.0
-  web_socket_channel: ^3.0.1
-  geolocator: ^10.0.1
+  web_socket_channel: ^3.0.2
+  geolocator: ^13.0.2
+  get: ^4.6.6
+  dio: ^5.7.0
+  provider: ^6.1.2
+  #flutter_3d_controller: ^2.1.0
+  model_viewer_plus: ^1.9.1
+
+
+
 
 
 dev_dependencies:
@@ -78,6 +86,17 @@ flutter:
     - assets/images/modern.png
     - assets/images/lovely.png
     - assets/images/vintage.png
+    - assets/models/collada_tpose.glb
+    - assets/images/avatarF.png
+    - assets/clothes/green_knit.png
+    - assets/clothes/slacks.png
+    - assets/clothes/jeans.png
+    - assets/clothes/long_skirt.png
+    - assets/clothes/mini_skirt.png
+    - assets/clothes/training.png
+    - assets/avatarF_keypoints.json
+
+
 
 
   #   - images/a_dot_ham.jpeg
