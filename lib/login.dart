@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'config.dart';
 
 class LoginView extends StatefulWidget {
@@ -60,14 +61,19 @@ class _LoginViewState extends State<LoginView> {
       final Map<String, dynamic> responseData = json.decode(response.body);
       final String userId = responseData['user_id'];
 
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userId', userId);
+      String? savedUserId = prefs.getString('userId');
+      print("로그인 후 저장된 userId: $savedUserId");
+
       // 홈 화면으로 이동하면서 사용자 ID를 전달
-      Navigator.pushReplacementNamed(
-        context,
-        '/home',
-        arguments: {
-          'userId': userId,
-        },
-      );
+      if (mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: {'userId': userId},
+        );
+      }
     } else {
       _showErrorDialog('로그인 실패: 이메일이나 비밀번호를 확인하세요.');
     }

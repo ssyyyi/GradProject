@@ -48,6 +48,7 @@ dependencies:
   provider: ^6.1.2
   #flutter_3d_controller: ^2.1.0
   model_viewer_plus: ^1.9.1
+  shared_preferences: ^2.5.2
 
 
 
@@ -87,6 +88,7 @@ flutter:
     - assets/images/lovely.png
     - assets/images/vintage.png
     - assets/models/collada_tpose.glb
+    - assets/models/standing_collada.glb
     - assets/images/avatarF.png
     - assets/clothes/green_knit.png
     - assets/clothes/slacks.png
@@ -95,6 +97,7 @@ flutter:
     - assets/clothes/mini_skirt.png
     - assets/clothes/training.png
     - assets/avatarF_keypoints.json
+    - assets/models/test.glb
 
 
 
