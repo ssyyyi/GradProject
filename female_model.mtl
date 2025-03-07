@@ -1,0 +1,52 @@
+# MakeHuman exported MTL
+# www.makehumancommunity.org
+
+
+newmtl young_caucasian_female
+Kd 1 1 1
+Ks 0.06275 0.05098 0.05098
+d 0
+map_Kd textures/young_lightskinned_female_diffuse.png
+map_D textures/young_lightskinned_female_diffuse.png
+
+newmtl material.001Material
+Kd 0.64 0.64 0.64
+Ks 0.5 0.5 0.5
+d 0
+map_Kd textures/patsytex1.png
+map_D textures/patsytex1.png
+
+newmtl Eye_brown
+Kd 1 1 1
+Ks 1 1 1
+d 0
+map_Kd textures/brown_eye.png
+map_D textures/brown_eye.png
+
+newmtl eyebrow001
+Kd 1 1 1
+Ks 0 0 0
+d 0
+map_Kd textures/eyebrow001.png
+map_D textures/eyebrow001.png
+
+newmtl SR_Anime_Female_Eyelashes_01
+Kd 0.8 0.8 0.8
+Ks 0.5 0.5 0.5
+d 0
+map_Kd textures/SR_Anime_Female_Eyelashes_01.png
+map_D textures/SR_Anime_Female_Eyelashes_01.png
+
+newmtl sport_bra01
+Kd 0.8039 0.8039 0.8039
+Ks 0.1098 0.1098 0.1098
+d 0
+map_Kd textures/sport_bra01.png
+map_D textures/sport_bra01.png
+
+newmtl elvs_lara_shorts1
+Kd 0.5 0.5 0.5
+Ks 0.5 0.5 0.5
+d 0
+map_Kd textures/shortstexture1.png
+map_D textures/shortstexture1.png

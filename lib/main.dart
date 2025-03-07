@@ -13,7 +13,14 @@ void main() async {
   String? userId = prefs.getString('userId');
   print("앱 시작 시 SharedPreferences에서 불러온 userId: $userId");
 
-  runApp(MyApp(initialUserId: userId));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ClosetProvider()),
+      ],
+      child: MyApp(initialUserId: userId),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

@@ -1,0 +1,38 @@
+# MakeHuman exported MTL
+# www.makehumancommunity.org
+
+
+newmtl middleage_cauasian_male
+Kd 1 0.95 0.85
+Ks 0.02745 0.02745 0.02745
+d 0
+map_Kd textures/middleage_lightskinned_male_diffuse.png
+map_D textures/middleage_lightskinned_male_diffuse.png
+
+newmtl material.001Material
+Kd 0.64 0.64 0.64
+Ks 0.1 0.1 0.1
+d 0
+map_Kd textures/hair_05.png
+map_D textures/hair_05.png
+
+newmtl Eye_brown
+Kd 1 1 1
+Ks 1 1 1
+d 0
+map_Kd textures/brown_eye.png
+map_D textures/brown_eye.png
+
+newmtl eyebrow008
+Kd 1 1 1
+Ks 0 0 0
+d 0
+map_Kd textures/eyebrow008.png
+map_D textures/eyebrow008.png
+
+newmtl materialMaterial
+Kd 0.8 0.8 0.8
+Ks 0.1 0.1 0.1
+d 0
+map_Kd textures/grey_shorts_d.png
+map_D textures/grey_shorts_d.png

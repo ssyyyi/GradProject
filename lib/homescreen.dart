@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wearly/remove_back.dart';
-import 'package:wearly/selected_style.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:wearly/state_management/closet_provider.dart';
 
@@ -22,31 +19,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  final List<String> _uploadedImages = [];
-  final List<String> _predictedStyles = [];
   final ImagePicker _picker = ImagePicker();
   final RemoveBgService _removeBgService = RemoveBgService();
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? pickedFile = await _picker.pickImage(source: source);
     if (pickedFile != null) {
       File imageFile = File(pickedFile.path);
+      final closetProvider = Provider.of<ClosetProvider>(context, listen: false);
 
-      setState(() {
-        _uploadedImages.add(imageFile.path);
-      });
+      // 먼저 로컬 이미지 추가 (배경 제거 전)
+      closetProvider.addImage(imageFile.path, "처리 중...");
 
+      // 배경 제거 및 스타일 예측 요청
       Map<String, String>? result = await _removeBgService.removeBackground(imageFile, widget.userId);
       if (result != null) {
-        setState(() {
-          _uploadedImages[_uploadedImages.length - 1] = result['bg_removed_image_url']!;
-          _predictedStyles.add(result['predicted_style']!);
-        });
+        // 업데이트된 이미지와 스타일 정보 반영
+        closetProvider.updateLastImage(result['bg_removed_image_url']!, result['predicted_style']!);
       }
     }
   }
@@ -83,24 +72,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _removeImage(int index) {
-    setState(() {
-      _uploadedImages.removeAt(index);
-    });
-  }
-
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('userId');
 
     if (mounted) {
-      setState(() {});
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const FirstScreen()));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final closetProvider = Provider.of<ClosetProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('WEarly'),
@@ -122,9 +106,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
-              itemCount: _uploadedImages.length,
+              itemCount: closetProvider.uploadedImages.length,
               itemBuilder: (context, index) {
-                var image = _uploadedImages[index];
+                var image = closetProvider.uploadedImages[index];
+                var style = closetProvider.predictedStyles[index];
+
                 return Stack(
                   fit: StackFit.expand,
                   children: [
@@ -132,10 +118,22 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? Image.network(image, fit: BoxFit.cover)
                         : Image.file(File(image), fit: BoxFit.cover),
                     Positioned(
+                      bottom: 5,
+                      left: 5,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        color: Colors.black54,
+                        child: Text(
+                          style,
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                    Positioned(
                       top: 5,
                       right: 5,
                       child: GestureDetector(
-                        onTap: () => _removeImage(index),
+                        onTap: () => closetProvider.removeImage(index),
                         child: const Icon(Icons.remove_circle, color: Colors.red),
                       ),
                     ),
