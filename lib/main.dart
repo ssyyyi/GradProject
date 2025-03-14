@@ -8,9 +8,10 @@ import 'package:wearly/state_management/closet_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // 비동기 초기화
+  WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   String? userId = prefs.getString('userId');
+
   print("앱 시작 시 SharedPreferences에서 불러온 userId: $userId");
 
   runApp(
@@ -23,21 +24,48 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final String? initialUserId;
 
   const MyApp({super.key, this.initialUserId});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late String? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _userId = widget.initialUserId;
+  }
+
+  Future<void> _updateUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? updatedUserId = prefs.getString('userId');
+
+    if (mounted) {
+      setState(() {
+        _userId = updatedUserId;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    print("MyApp에서 초기 userId: $initialUserId");
+    print("MyApp에서 초기 userId: $_userId");
 
     return MaterialApp(
       title: 'WEarly',
       theme: ThemeData(primarySwatch: Colors.blueGrey),
-      home: initialUserId != null ? HomeScreen(userId: initialUserId!) : const FirstScreen(),
+      home: _userId != null ? HomeScreen(userId: _userId!) : const FirstScreen(),
       routes: {
-        '/home': (context) => HomeScreen(userId: initialUserId!),
+        '/home': (context) {
+          _updateUserId();
+          return _userId != null ? HomeScreen(userId: _userId!) : const FirstScreen();
+        },
         '/signup': (context) => const AuthView(),
         '/login': (context) => const LoginView(),
       },

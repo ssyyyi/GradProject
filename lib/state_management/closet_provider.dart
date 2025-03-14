@@ -4,19 +4,38 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ClosetProvider extends ChangeNotifier {
   List<String> _uploadedImages = [];
   List<String> _predictedStyles = [];
+  String _currentUserId = "";
 
   List<String> get uploadedImages => _uploadedImages;
   List<String> get predictedStyles => _predictedStyles;
+  String get currentUserId => _currentUserId;
 
-  ClosetProvider() {
-    _loadImages(); // 앱 실행 시 저장된 데이터 불러오기
+  //계정별 옷장 데이터 불러오기
+  Future<void> loadCloset(String userId) async {
+    _currentUserId = userId;
+    final prefs = await SharedPreferences.getInstance();
+
+    _uploadedImages = prefs.getStringList('uploadedImages_$userId') ?? [];
+    _predictedStyles = prefs.getStringList('predictedStyles_$userId') ?? [];
+
+    // debugPrint("[loadCloset] 계정 변경됨: $_currentUserId");
+    // debugPrint("[loadCloset] 불러온 이미지 리스트: $_uploadedImages");
+    // debugPrint("[loadCloset] 불러온 스타일 리스트: $_predictedStyles");
+
+    notifyListeners();
   }
 
-  Future<void> _loadImages() async {
-    final prefs = await SharedPreferences.getInstance();
-    _uploadedImages = prefs.getStringList('uploadedImages') ?? [];
-    _predictedStyles = prefs.getStringList('predictedStyles') ?? [];
+  Future<void> switchUser(String userId) async {
+    _currentUserId = userId;
+    _uploadedImages = [];
+    _predictedStyles = [];
     notifyListeners();
+
+
+    //debugPrint("[switchUser] 계정 전환 중: $_currentUserId");
+
+    await Future.delayed(const Duration(milliseconds: 100));
+    await loadCloset(userId);
   }
 
   Future<void> addImage(String imageUrl, String style) async {
@@ -32,6 +51,7 @@ class ClosetProvider extends ChangeNotifier {
       _predictedStyles[_predictedStyles.length - 1] = newStyle;
       notifyListeners();
       await _saveImages();
+
     }
   }
 
@@ -44,9 +64,20 @@ class ClosetProvider extends ChangeNotifier {
     }
   }
 
+
   Future<void> _saveImages() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('uploadedImages', _uploadedImages);
-    await prefs.setStringList('predictedStyles', _predictedStyles);
+    await prefs.setStringList('uploadedImages_$_currentUserId', _uploadedImages);
+    await prefs.setStringList('predictedStyles_$_currentUserId', _predictedStyles);
+
+    //debugPrint(" [saveImages] 계정 ($_currentUserId) 데이터 저장 완료");
+  }
+
+  Future<void> clearCloset() async {
+    _uploadedImages = [];
+    _predictedStyles = [];
+    notifyListeners();
+
+   // debugPrint(" [clearCloset] 메모리에서 옷장 데이터 초기화됨");
   }
 }

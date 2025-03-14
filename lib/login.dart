@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wearly/homescreen.dart';
 import 'config.dart';
 
 class LoginView extends StatefulWidget {
@@ -66,17 +67,16 @@ class _LoginViewState extends State<LoginView> {
       String? savedUserId = prefs.getString('userId');
       print("로그인 후 저장된 userId: $savedUserId");
 
-      // 홈 화면으로 이동하면서 사용자 ID를 전달
       if (mounted) {
-        Navigator.pushReplacementNamed(
+        Navigator.pushReplacement(
           context,
-          '/home',
-          arguments: {'userId': userId},
+          MaterialPageRoute(builder: (context) => HomeScreen(userId: userId)),
         );
       }
     } else {
       _showErrorDialog('로그인 실패: 이메일이나 비밀번호를 확인하세요.');
     }
+
     setState(() {
       isLoading = false;
     });

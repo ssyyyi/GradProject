@@ -57,7 +57,7 @@ class _LocationScreenState extends State<LocationScreen> {
       setState(() {
         locationMessage = "위치 정보를 가져올 수 없습니다: $e";
       });
-      print("❌ 위치 정보를 가져오는 중 오류 발생: $e");
+      print("위치 정보를 가져오는 중 오류 발생: $e");
     }
   }
 
