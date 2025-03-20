@@ -37,7 +37,6 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-// 로그인 API
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -65,10 +64,16 @@ router.post('/login', async (req, res) => {
             expiresIn: '1h', // 토큰 만료 시간 (1시간)
         });
 
-        res.json({ message: '로그인 성공', token,
-            user_id : user.email,
-         });
-         
+        // 선호 스타일 확인
+        const needsPreferenceSelection = !user.prefer || user.prefer.trim() === '';
+
+        res.json({
+            message: '로그인 성공',
+            token,
+            user_id: user.email,
+            needsPreferenceSelection
+        });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: '서버 오류' });
@@ -92,5 +97,34 @@ const authenticateToken = (req, res, next) => {
         next();
     });
 };
+
+router.post('/prefer', authenticateToken, async (req, res) => {
+    const { prefer } = req.body;
+    const userId = req.user.email; // JWT에서 사용자 정보 추출
+
+    if (!prefer) {
+        return res.status(400).json({ error: '선호 스타일을 입력해야 합니다.' });
+    }
+
+    try {
+        await db.query('UPDATE users SET prefer = ? WHERE email = ?', [prefer, userId]);
+        res.json({ message: '선호 스타일이 저장되었습니다.' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: '서버 오류' });
+    }
+});
+
+router.get('/profile', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.email; // JWT에서 사용자 정보 추출
+        const [userProfile] = await db.query('SELECT * FROM users WHERE email = ?', [userId]);
+        res.json({ profile: userProfile });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: '서버 오류' });
+    }
+});
+
 
 module.exports = router;  // router 객체만 내보내기

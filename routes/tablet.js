@@ -18,10 +18,21 @@ router.get('/images', async (req, res) => {
     );
 
     if (rows.length > 0) {
+      // 서버의 URL을 추출
+      const serverUrl = req.protocol + '://' + req.get('host');
+
+      // 각 이미지 URL에 대해 도메인을 붙여서 반환
+      const updatedRows = rows.map(row => {
+        return {
+          ...row,
+          image_url: `${serverUrl}${row.image_url}`  // 절대 경로로 변환
+        };
+      });
+
       // 이미지 URL과 카테고리를 반환
       res.status(200).json({
         success: true,
-        data: rows
+        data: updatedRows
       });
     } else {
       // 해당 userId에 대한 이미지가 없을 때

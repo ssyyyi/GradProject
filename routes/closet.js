@@ -3,219 +3,137 @@ const multer = require('multer');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const FormData = require('form-data');  // form-data 패키지 임포트
+const jwt = require('jsonwebtoken');
+const vision = require('@google-cloud/vision');
+const FormData = require('form-data');
+const { spawn } = require('child_process'); // Python 실행을 위한 spawn 추가
 
 const testUpload = require('multer')({ dest: 'uploads/test/' }); 
 const db = require('../config/db'); 
 const router = express.Router();
 
 const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY;
-const STYLE_API_KEY = process.env.STYLE_API_KEY;
+const GOOGLE_CLOUD_API_KEY = process.env.GOOGLE_CLOUD_API_KEY;
 
-const analyzeImage = async (imageUrl) => {
-  const endpoint = `https://vision.googleapis.com/v1/images:annotate?key=${STYLE_API_KEY}`;
+const client = new vision.ImageAnnotatorClient();
 
-  const requestBody = {
-    "requests": [
-      {
-        "image": {
-          "source": { "imageUri": imageUrl }
-        }, 
-        "features": [
-          {
-            "type": "LABEL_DETECTION",
-            "maxResults": 10
-          },
-          {
-            "type": "OBJECT_LOCALIZATION",
-            "maxResults": 2
-          },
-          {
-            "type": "IMAGE_PROPERTIES" // 색상 정보를 포함
-          }
-        ]
-      }
-    ]
-  };
+// JWT 토큰 검증 미들웨어
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // "Bearer <token>"에서 토큰만 추출
 
-  try {
-    const response = await axios.post(endpoint, requestBody, {
-      headers: { "Content-Type": "application/json" }
-    });
-  
-    console.log('Google Vision API 응답:', response.data);
-    
-    if (response.data.error) {
-      console.error('API 에러:', response.data.error);
-    }
-  
-    return response.data.responses[0]; // 첫 번째 요청의 응답만 반환
-  } catch (error) {
-    console.error('Google Vision API 호출 실패:', error);
-    throw new Error('Google Vision API 호출 실패');
+  if (!token) {
+    return res.status(401).json({ error: '토큰이 필요합니다.' });
   }
-  
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: '토큰이 유효하지 않습니다.' });
+    }
+    req.user = user; // 토큰에서 가져온 사용자 정보 저장
+    next();
+  });
 };
 
+async function analyzeImage(imgURI) {
+  try {
+    const [result] = await client.labelDetection(imgURI);
+    const labels = result.labelAnnotations;
+    return { labels };
+  } catch (error) {
+    console.error('Google Vision API 오류:', error.message);
+    throw new Error('이미지 분석 실패');
+  }
+}
 
 router.get('/images', (req, res) => {
   const userId = req.query.userId;
-
-  // Query to fetch image URLs based on userId
   const query = 'SELECT image_url FROM vision_data WHERE user_id = ?';
-
   db.query(query, [userId], (err, result) => {
     if (err) {
-      console.error('Database query error:', err);
-      return res.status(500).json({
-        success: false,
-        message: 'Database query error',
-        error: err.message // Return detailed error message
-      });
+      return res.status(500).json({ success: false, message: 'DB 오류', error: err.message });
     }
-
-    // If no images are found, send an empty array, not an error
-    res.status(200).json({
-      success: true,
-      message: result.length > 0 ? 'Images retrieved successfully' : 'No images found for the given userId',
-      data: result // This will be an empty array if no images are found
-    });
+    res.status(200).json({ success: true, data: result });
   });
 });
 
+const uploadDir = path.resolve('C:/SMWU/GradProject/uploads/test'); // 업로드 경로를 절대경로로 설정
 router.post('/bgremoved', testUpload.single('image'), async (req, res) => {
   const imageFile = req.file;
+  if (!imageFile) return res.status(400).json({ error: '이미지 파일이 필요합니다.' });
 
-  // 요청 유효성 검사
-  if (!imageFile) {
-    console.log('No image file received');  // 디버깅용 메시지
-    return res.status(400).json({ error: '이미지 파일이 필요합니다.' });
+  const { userId } = req.body;
+  if (!userId) {
+    return res.status(400).json({ error: 'userId가 필요합니다.' });
   }
 
-  console.log('Received image file:', imageFile);  // 디버깅용 메시지
-
   try {
-    // remove.bg API 호출을 위한 FormData 생성
     const form = new FormData();
     form.append('image_file', fs.createReadStream(imageFile.path));
-
-    // FormData의 헤더 추출
     const headers = form.getHeaders();
-    headers['X-Api-Key'] = REMOVE_BG_API_KEY; // API 키 추가
+    headers['X-Api-Key'] = REMOVE_BG_API_KEY;
 
-    console.log('Calling remove.bg API with image:', imageFile.path);  // 디버깅용 메시지
-
-    // remove.bg API 호출
     const removeBgResponse = await axios.post('https://api.remove.bg/v1.0/removebg', form, {
       headers: headers, 
-      responseType: 'arraybuffer' // 이미지 데이터를 배열로 받음
+      responseType: 'arraybuffer'
     });
 
-    console.log('remove.bg API response received');  // 디버깅용 메시지
-
-    // 배경이 제거된 이미지 파일 경로 생성
-    const bgRemovedPath = path.join('uploads/test', `bg-removed-${imageFile.filename}.jpg`);
+    const bgRemovedPath = path.resolve(uploadDir, `bg-removed-${imageFile.filename}.jpg`);
     fs.writeFileSync(bgRemovedPath, removeBgResponse.data);
-    console.log('Background removed image saved to:', bgRemovedPath);  // 디버깅용 메시지
+    fs.unlinkSync(imageFile.path);
 
-    // 원본 이미지 파일 삭제 (더 이상 필요 없을 경우)
-    fs.unlinkSync(imageFile.path);  // 원본 이미지 삭제
-    console.log('Original image deleted:', imageFile.path);  // 디버깅용 메시지
+    // DB에 상대 경로 저장 (도메인 제외)
+    const bgRemovedImageRelativeUrl = `/uploads/test/bg-removed-${imageFile.filename}.jpg`;
 
-    // 서버 URL을 동적으로 생성
-    const serverUrl = req.protocol + '://' + req.get('host');
+    // 🔹 스타일 예측 실행
+    const pythonPath = process.env.PYTHON_PATH || 'C:\\Python312\\python.exe';
+    const pythonProcess = spawn(pythonPath, ['test_style_1class.py', '--image-path', bgRemovedPath], {
+      cwd: path.resolve('C:/SMWU/GradProject/model/run')
+    });
 
-    // 배경이 제거된 이미지 URL 생성
-    const bgRemovedImageUrl = `${serverUrl}/uploads/test/bg-removed-${imageFile.filename}.jpg`;
+    let resultData = '';
     
-    const bgRemovedImageUrl2 = `https://localhost:3000/uploads/test/bg-removed-${imageFile.filename}.jpg`;
+    pythonProcess.stdout.on('data', (data) => {
+      console.log('Python 출력:', data.toString());
+      resultData += data.toString();
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+      console.error('Python 오류:', data.toString());
+    });
 
-    // Google Vision API 호출
-    const visionData = await analyzeImage(bgRemovedImageUrl2);
+    pythonProcess.on('close', async (code) => {
+      if (code !== 0) {
+        return res.status(500).json({ error: 'ResNet 스타일 예측 실패' });
+      }
+      try {
+        const prediction = JSON.parse(resultData);
+        const predictedStyle = prediction.predicted_class;
 
-    // labels와 objects 데이터 추출
-    const labels = visionData.labelAnnotations?.map((label) => label.description) || [];
-    const objects = visionData.localizedObjectAnnotations?.map((obj) => obj.name) || [];
-    const colors = visionData.imagePropertiesAnnotation?.dominantColors.colors.map((color) => ({
-      red: color.color.red,
-      green: color.color.green,
-      blue: color.color.blue,
-      score: color.score, // 색상의 비율
-    })) || [];
-    console.log('Labels:', labels); // 라벨 정보
-    console.log('Objects:', objects); // 객체 정보
-    console.log('Colors:', colors); // 색상 정보
+        // 예측된 스타일을 DB에 저장 (상대 경로로 저장)
+        await db.execute(
+          'INSERT INTO vision_data (user_id, image_url, predicted_style) VALUES (?, ?, ?)',
+          [userId, bgRemovedImageRelativeUrl, predictedStyle]
+        );
 
-    // 프론트엔드로 반환
-    res.status(200).json({
-      message: '이미지 처리 및 분석 완료',
-      bg_removed_image_url: bgRemovedImageUrl,
+        // 클라이언트에게는 절대 경로를 전달
+        const serverUrl = req.protocol + '://' + req.get('host');
+        const bgRemovedImageUrl = `${serverUrl}${bgRemovedImageRelativeUrl}`;
+
+        res.status(200).json({
+          message: '이미지 처리 및 분석 완료',
+          bg_removed_image_url: bgRemovedImageUrl,
+          predicted_style: predictedStyle
+        });
+
+      } catch (error) {
+        res.status(500).json({ error: '예측 결과 파싱 실패' });
+      }
     });
   } catch (error) {
-    console.error('이미지 분석 실패:', error);
-    res.status(500).json({ error: '이미지 분석에 실패했습니다.' });
+    res.status(500).json({ error: '이미지 처리 실패' });
   }
 });
 
-router.post('/styles', async (req, res) => {
-  const { userId, imageUrl, styles } = req.body;
-
-  // 요청 유효성 검사
-  if (!userId || !imageUrl || !styles || !Array.isArray(styles) || styles.length === 0) {
-    return res.status(400).json({ error: '모든 필드를 정확히 입력해 주세요.' });
-  }
-
-  try {
-    // 스타일과 컬럼 매핑
-    const styleMap = {
-      minimal: '미니멀',
-      casual: '캐주얼',
-      lovely: '러블리',
-      street: '스트릿',
-      modern: '모던',
-      vintage: '빈티지',
-    };
-
-    // 1. Vision 데이터 저장
-    const [visionResult] = await db.execute(
-      'INSERT INTO vision_data (user_id, image_url) VALUES (?, ?)',
-      [userId, imageUrl]
-    );
-    const visionId = visionResult.insertId; // 생성된 vision_data ID
-
-    // 2. Styles 데이터 저장
-    const columns = Object.keys(styleMap);
-    const values = columns.map((column) => (styles.includes(styleMap[column]) ? true : false));
-
-    // 컬럼 업데이트 쿼리 생성
-    const updateQuery = `
-      UPDATE vision_data
-      SET ${columns.map((col) => `${col} = ?`).join(', ')}
-      WHERE id = ?;
-    `;
-    
-    // 쿼리 실행
-    await db.execute(updateQuery, [...values, visionId]);
-
-    console.log('Vision data and styles successfully saved');
-
-    // 응답
-    res.status(201).json({
-      message: 'Vision data and styles successfully saved and tablet notified!',
-      vision_data: {
-        id: visionId,
-        user_id: userId,
-        image_url: imageUrl,
-        styles: columns.reduce((result, column, index) => {
-          result[column] = values[index];
-          return result;
-        }, {}),
-      },
-    });
-  } catch (error) {
-    console.error('Error saving vision data and styles:', error);
-    res.status(500).json({ error: 'Vision data와 스타일 저장에 실패했습니다.' });
-  }
-});
 
 module.exports = router;

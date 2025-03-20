@@ -1,0 +1,48 @@
+@prefix ex: <http://example.org/fashion#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+ex:FashionOntology rdf:type owl:Ontology .
+
+# Clothing Categories (현재 상의만 존재)
+ex:ClothingItem rdf:type owl:Class .
+ex:Top rdf:type owl:Class ; rdfs:subClassOf ex:ClothingItem .
+
+# Styles (10개 스타일)
+ex:Style rdf:type owl:Class .
+ex:Traditional rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Manish rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Feminine rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Ethnic rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Contemporary rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Natural rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Genderless rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Sporty rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Subculture rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+ex:Casual rdf:type owl:Class ; rdfs:subClassOf ex:Style .
+
+# Situations (추천 상황 4개)
+ex:Situation rdf:type owl:Class .
+ex:CasualMeeting rdf:type owl:Class ; rdfs:subClassOf ex:Situation .
+ex:FormalEvent rdf:type owl:Class ; rdfs:subClassOf ex:Situation .
+ex:Sports rdf:type owl:Class ; rdfs:subClassOf ex:Situation .
+ex:Date rdf:type owl:Class ; rdfs:subClassOf ex:Situation .
+
+
+# 계절 개념 유지
+ex:Season rdf:type owl:Class .
+ex:SpringAutumn rdf:type owl:Class ; rdfs:subClassOf ex:Season .
+ex:Summer rdf:type owl:Class ; rdfs:subClassOf ex:Season .
+ex:Winter rdf:type owl:Class ; rdfs:subClassOf ex:Season .
+
+# 온도와 계절을 연결하는 관계
+ex:suitableForSeason rdf:type owl:ObjectProperty ; 
+    rdfs:domain ex:ClothingItem ; 
+    rdfs:range ex:Season .
+
+
+# Properties
+ex:suitableForStyle rdf:type owl:ObjectProperty ; rdfs:domain ex:ClothingItem ; rdfs:range ex:Style .
+ex:suitableForSituation rdf:type owl:ObjectProperty ; rdfs:domain ex:ClothingItem ; rdfs:range ex:Situation .
+ex:suitableForWeather rdf:type owl:ObjectProperty ; rdfs:domain ex:ClothingItem ; rdfs:range ex:WeatherCondition .
