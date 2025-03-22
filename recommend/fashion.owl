@@ -46,3 +46,23 @@ ex:suitableForSeason rdf:type owl:ObjectProperty ;
 ex:suitableForStyle rdf:type owl:ObjectProperty ; rdfs:domain ex:ClothingItem ; rdfs:range ex:Style .
 ex:suitableForSituation rdf:type owl:ObjectProperty ; rdfs:domain ex:ClothingItem ; rdfs:range ex:Situation .
 ex:suitableForWeather rdf:type owl:ObjectProperty ; rdfs:domain ex:ClothingItem ; rdfs:range ex:WeatherCondition .
+
+# Styles and Situations Mapping (스타일과 상황 연결 1:N)
+ex:CasualMeeting ex:suitableForStyle ex:Casual .
+ex:CasualMeeting ex:suitableForStyle ex:Natural .
+ex:CasualMeeting ex:suitableForStyle ex:Genderless .
+ex:CasualMeeting ex:suitableForStyle ex:Contemporary .
+
+ex:FormalEvent ex:suitableForStyle ex:Traditional .
+ex:FormalEvent ex:suitableForStyle ex:Manish .
+ex:FormalEvent ex:suitableForStyle ex:Feminine .
+ex:FormalEvent ex:suitableForStyle ex:Contemporary .
+
+ex:Sports ex:suitableForStyle ex:Sporty .
+ex:Sports ex:suitableForStyle ex:Casual .
+
+ex:Date ex:suitableForStyle ex:Feminine .
+ex:Date ex:suitableForStyle ex:Contemporary .
+ex:Date ex:suitableForStyle ex:Ethnic .
+ex:Date ex:suitableForStyle ex:Subculture .
+
