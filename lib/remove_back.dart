@@ -24,7 +24,7 @@ class RemoveBgService {
       request.fields['userId'] = userId;
       //request.fields['user_Id'] = userId;
 
-      var response = await request.send().timeout(const Duration(seconds: 30));
+      var response = await request.send().timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final responseData = await response.stream.bytesToString();
@@ -32,10 +32,11 @@ class RemoveBgService {
 
         print('스타일: $data[predicted_style]');
 
-        if (data.containsKey('bg_removed_image_url') && data.containsKey('predicted_style')) {
+        if (data.containsKey('bg_removed_image_url') && data.containsKey('predicted_style') && data.containsKey('predicted_category')) {
           return {
             'bg_removed_image_url': data['bg_removed_image_url'],
             'predicted_style': data['predicted_style'],
+            'predicted_category': data['predicted_category']
           };
         } else {
           print('배경 제거 성공했지만 필요한 데이터를 찾을 수 없음.');

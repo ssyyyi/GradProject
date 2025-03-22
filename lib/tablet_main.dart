@@ -49,7 +49,7 @@ class SmartClosetUI extends StatelessWidget {
               userId: userId,
             ), // 옷장 화면
             ModelLoad(), // 스타일 추천 화면
-            const ChatbotScreen(), // 챗봇 화면
+            //const ChatbotScreen(), // 챗봇 화면
           ],
         ),
       ),

@@ -6,6 +6,9 @@ import 'package:wearly/chatbot.dart';
 import 'package:provider/provider.dart';
 import 'package:wearly/state_management/closet_provider.dart';
 
+import 'outfit_recommend.dart';
+import 'outfit_ui.dart';
+
 class HomeScreen extends StatefulWidget {
   final String userId;
 
@@ -80,8 +83,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final List<Widget> _screens = [
       ClosetScreen(userId: _currentUserId),
+      WeatherAndOutfitScreen(),
       Center(child: Text('추천 기록 페이지', style: TextStyle(fontSize: 20))),
-      ChatScreen(),
     ];
 
     return Scaffold(
@@ -105,9 +108,9 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.photo_library), label: '옷장'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: '추천 기록'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: '챗봇'),
+          BottomNavigationBarItem(icon: Icon(Icons.photo_library), label: 'cloth'),
+          BottomNavigationBarItem(icon: Icon(Icons.accessibility_sharp), label: 'outfit'),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'history'),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:wearly/firstscreen.dart';
 import 'package:wearly/homescreen.dart';
 import 'package:wearly/signup.dart';
@@ -9,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('ko', null);
   final prefs = await SharedPreferences.getInstance();
   String? userId = prefs.getString('userId');
 

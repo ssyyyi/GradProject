@@ -18,7 +18,7 @@ class ModelLoad extends StatelessWidget {
         appBar: AppBar(title: const Text('Model Viewer')),
         body: const ModelViewer(
           backgroundColor: Color.fromARGB(0xFF, 0xEE, 0xEE, 0xEE),
-          src: 'assets/models/test.glb',
+          src: 'assets/models/standing_collada.glb',
           alt: 'A 3D model',
           //ar: true,
           autoRotate: false,
