@@ -8,8 +8,6 @@ const fs = require("fs");
 
 const router = express.Router();
 
-// Multer 설정 (업로드된 파일은 'uploads/' 폴더에 저장)
-const upload = multer({ dest: "uploads/fitting/" });
 
 // /fitting 엔드포인트
 router.post("/fitting", async (req, res) => {
@@ -44,12 +42,14 @@ router.post("/fitting", async (req, res) => {
         }
 
         try {
+          const serverUrl = req.protocol + '://' + req.get('host');
           const imageUrl = stdout.trim(); // Python script에서 반환된 이미지 URL
+          const fittingUrl = `${serverUrl}${imageUrl}`;
           return res.status(200).json({
             success: true,
             message: "Fitting successful",
             data: {
-              image_url: imageUrl,
+              image_url: fittingUrl,
             },
           });
         } catch (parseError) {
