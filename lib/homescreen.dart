@@ -6,7 +6,6 @@ import 'package:wearly/chatbot.dart';
 import 'package:provider/provider.dart';
 import 'package:wearly/state_management/closet_provider.dart';
 
-import 'outfit_recommend.dart';
 import 'outfit_ui.dart';
 
 class HomeScreen extends StatefulWidget {
