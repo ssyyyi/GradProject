@@ -57,7 +57,7 @@ async function getRecommendedClothes(userId, situation, lat, lon) {
 
   return new Promise((resolve, reject) => {
     // Python 파일 실행
-    execFile("python3", ["../recommend/recommend.py", situation, season], (error, stdout, stderr) => {
+    execFile("python3", ["recommend/recommend.py", situation, season], (error, stdout, stderr) => {
       if (error) {
         console.error("Python 실행 오류:", error);
         reject([]);

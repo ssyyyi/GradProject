@@ -2,7 +2,7 @@ const express = require('express');
 const db = require('../config/db'); // 데이터베이스 설정 파일
 const router = express.Router();
 
-// /tablet/images 요청에 대해 userId에 해당하는 이미지 URL과 카테고리 반환
+// /tablet/images 요청에 대해 userId에 해당하는 이미지 URL과 카테고리, 스타일 반환
 router.get('/images', async (req, res) => {
   const { userId } = req.query;  // userId는 쿼리 파라미터로 전달
 
@@ -11,9 +11,9 @@ router.get('/images', async (req, res) => {
   }
 
   try {
-    // 데이터베이스에서 userId에 해당하는 이미지 URL 가져오기
+    // 데이터베이스에서 userId에 해당하는 이미지 URL, 카테고리, 스타일 가져오기
     const [rows] = await db.execute(
-      'SELECT image_url FROM vision_data WHERE user_id = ?',
+      'SELECT image_url, category, predicted_style FROM vision_data WHERE user_id = ?',
       [userId]
     );
 
@@ -25,11 +25,11 @@ router.get('/images', async (req, res) => {
       const updatedRows = rows.map(row => {
         return {
           ...row,
-          image_url: `${serverUrl}${row.image_url}`  // 절대 경로로 변환
+          image_url: `${serverUrl}${row.image_url}`,  // 절대 경로로 변환
         };
       });
 
-      // 이미지 URL과 카테고리를 반환
+      // 이미지 URL, 카테고리, 스타일을 반환
       res.status(200).json({
         success: true,
         data: updatedRows

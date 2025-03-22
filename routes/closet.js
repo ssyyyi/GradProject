@@ -3,7 +3,6 @@ const multer = require('multer');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const jwt = require('jsonwebtoken');
 const vision = require('@google-cloud/vision');
 const FormData = require('form-data');
 const { spawn } = require('child_process'); // Python 실행을 위한 spawn 추가
@@ -16,24 +15,6 @@ const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY;
 const GOOGLE_CLOUD_API_KEY = process.env.GOOGLE_CLOUD_API_KEY;
 
 const client = new vision.ImageAnnotatorClient();
-
-// JWT 토큰 검증 미들웨어
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // "Bearer <token>"에서 토큰만 추출
-
-  if (!token) {
-    return res.status(401).json({ error: '토큰이 필요합니다.' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: '토큰이 유효하지 않습니다.' });
-    }
-    req.user = user; // 토큰에서 가져온 사용자 정보 저장
-    next();
-  });
-};
 
 async function analyzeImage(imgURI) {
   try {
@@ -57,7 +38,7 @@ router.get('/images', (req, res) => {
   });
 });
 
-const uploadDir = path.resolve('C:/SMWU/GradProject/uploads/test'); // 업로드 경로를 절대경로로 설정
+const uploadDir = path.resolve('C:/SMWU/GradProject/uploads/test'); // 업로드 경로 설정
 router.post('/bgremoved', testUpload.single('image'), async (req, res) => {
   const imageFile = req.file;
   if (!imageFile) return res.status(400).json({ error: '이미지 파일이 필요합니다.' });
@@ -82,52 +63,77 @@ router.post('/bgremoved', testUpload.single('image'), async (req, res) => {
     fs.writeFileSync(bgRemovedPath, removeBgResponse.data);
     fs.unlinkSync(imageFile.path);
 
-    // DB에 상대 경로 저장 (도메인 제외)
     const bgRemovedImageRelativeUrl = `/uploads/test/bg-removed-${imageFile.filename}.jpg`;
 
     // 🔹 스타일 예측 실행
     const pythonPath = process.env.PYTHON_PATH || 'C:\\Python312\\python.exe';
-    const pythonProcess = spawn(pythonPath, ['test_style_1class.py', '--image-path', bgRemovedPath], {
+    const stylePythonProcess = spawn(pythonPath, ['test_style_1class.py', '--image-path', bgRemovedPath], {
       cwd: path.resolve('C:/SMWU/GradProject/model/run')
     });
 
-    let resultData = '';
+    let styleResultData = '';
     
-    pythonProcess.stdout.on('data', (data) => {
-      console.log('Python 출력:', data.toString());
-      resultData += data.toString();
+    stylePythonProcess.stdout.on('data', (data) => {
+      console.log('Python 스타일 출력:', data.toString());
+      styleResultData += data.toString();
     });
     
-    pythonProcess.stderr.on('data', (data) => {
-      console.error('Python 오류:', data.toString());
+    stylePythonProcess.stderr.on('data', (data) => {
+      console.error('Python 스타일 오류:', data.toString());
     });
 
-    pythonProcess.on('close', async (code) => {
+    stylePythonProcess.on('close', async (code) => {
       if (code !== 0) {
         return res.status(500).json({ error: 'ResNet 스타일 예측 실패' });
       }
       try {
-        const prediction = JSON.parse(resultData);
-        const predictedStyle = prediction.predicted_class;
+        const stylePrediction = JSON.parse(styleResultData);
+        const predictedStyle = stylePrediction.predicted_class;
 
-        // 예측된 스타일을 DB에 저장 (상대 경로로 저장)
-        await db.execute(
-          'INSERT INTO vision_data (user_id, image_url, predicted_style) VALUES (?, ?, ?)',
-          [userId, bgRemovedImageRelativeUrl, predictedStyle]
-        );
-
-        // 클라이언트에게는 절대 경로를 전달
-        const serverUrl = req.protocol + '://' + req.get('host');
-        const bgRemovedImageUrl = `${serverUrl}${bgRemovedImageRelativeUrl}`;
-
-        res.status(200).json({
-          message: '이미지 처리 및 분석 완료',
-          bg_removed_image_url: bgRemovedImageUrl,
-          predicted_style: predictedStyle
+        // 🔹 카테고리 예측 실행
+        const categoryPythonProcess = spawn(pythonPath, ['test_category.py', '--image-path', bgRemovedPath], {
+          cwd: path.resolve('C:/SMWU/GradProject/model/run')
         });
 
+        let categoryResultData = '';
+        
+        categoryPythonProcess.stdout.on('data', (data) => {
+          console.log('Python 카테고리 출력:', data.toString());
+          categoryResultData += data.toString();
+        });
+        
+        categoryPythonProcess.stderr.on('data', (data) => {
+          console.error('Python 카테고리 오류:', data.toString());
+        });
+
+        categoryPythonProcess.on('close', async (code) => {
+          if (code !== 0) {
+            return res.status(500).json({ error: 'ResNet 카테고리 예측 실패' });
+          }
+          try {
+            const categoryPrediction = JSON.parse(categoryResultData);
+            const predictedCategory = categoryPrediction.predicted_class;
+
+            await db.execute(
+              'INSERT INTO vision_data (user_id, image_url, predicted_style, category) VALUES (?, ?, ?, ?)',
+              [userId, bgRemovedImageRelativeUrl, predictedStyle, predictedCategory]
+            );
+
+            const serverUrl = req.protocol + '://' + req.get('host');
+            const bgRemovedImageUrl = `${serverUrl}${bgRemovedImageRelativeUrl}`;
+
+            res.status(200).json({
+              message: '이미지 처리 및 분석 완료',
+              bg_removed_image_url: bgRemovedImageUrl,
+              predicted_style: predictedStyle,
+              predicted_category: predictedCategory
+            });
+          } catch (error) {
+            res.status(500).json({ error: '카테고리 예측 결과 파싱 실패' });
+          }
+        });
       } catch (error) {
-        res.status(500).json({ error: '예측 결과 파싱 실패' });
+        res.status(500).json({ error: '스타일 예측 결과 파싱 실패' });
       }
     });
   } catch (error) {
@@ -135,5 +141,80 @@ router.post('/bgremoved', testUpload.single('image'), async (req, res) => {
   }
 });
 
+
+// 의상 삭제 API
+router.delete('/delete', async (req, res) => {
+  const { userId, imageUrl } = req.body;
+
+  if (!userId || !imageUrl) {
+    return res.status(400).json({ error: 'userId와 imageUrl이 필요합니다.' });
+  }
+
+  try {
+    // 클라이언트에서 받은 전체 URL에서 서버 도메인 부분 제거
+    const serverUrl = req.protocol + '://' + req.get('host');
+    const relativeImageUrl = imageUrl.replace(serverUrl, '');
+
+    // DB에서 해당 이미지 찾기
+    const [rows] = await db.execute('SELECT image_url FROM vision_data WHERE user_id = ? AND image_url = ?', [userId, relativeImageUrl]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ error: '해당 이미지가 없습니다.' });
+    }
+
+    const filePath = path.resolve('C:/SMWU/GradProject', rows[0].image_url); // 실제 파일 경로
+
+    // DB에서 삭제
+    await db.execute('DELETE FROM vision_data WHERE user_id = ? AND image_url = ?', [userId, relativeImageUrl]);
+
+    // 로컬 파일 삭제
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    res.status(200).json({ message: '의상 삭제 완료' });
+  } catch (error) {
+    res.status(500).json({ error: '의상 삭제 실패' });
+  }
+});
+
+// 의상 정보 수정 API
+router.put('/modify', async (req, res) => {
+  const { userId, imageUrl, category, color, style } = req.body;
+
+  if (!userId || !imageUrl) {
+    return res.status(400).json({ error: 'userId와 imageUrl이 필요합니다.' });
+  }
+
+  try {
+    const updates = [];
+    const values = [];
+
+    if (category) {
+      updates.push('category = ?');
+      values.push(category);
+    }
+    if (color) {
+      updates.push('color = ?');
+      values.push(color);
+    }
+    if (style) {
+      updates.push('predicted_style = ?');
+      values.push(style);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: '수정할 필드가 필요합니다.' });
+    }
+
+    values.push(userId, imageUrl);
+
+    await db.execute(`UPDATE vision_data SET ${updates.join(', ')} WHERE user_id = ? AND image_url = ?`, values);
+
+    res.status(200).json({ message: '의상 정보 수정 완료' });
+  } catch (error) {
+    res.status(500).json({ error: '의상 정보 수정 실패' });
+  }
+});
 
 module.exports = router;
