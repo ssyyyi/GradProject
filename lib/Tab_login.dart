@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wearly/tablet_main.dart';
-import 'package:wearly/weather.dart';
 import 'dart:convert';
 import 'config.dart';
 
@@ -61,17 +61,19 @@ class _LoginViewState extends State<LoginView> {
 
       print('유저 아이디: $userId');
 
-      // 로그인 성공 시 SmartClosetUI로 이동
+      // ✅ SharedPreferences에 저장
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('userId', userId);
+
+      // ✅ SmartClosetUI로 이동 (userId 전달 없이)
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-            builder: (context) => SmartClosetUI(
-                  userId: userId,
-                )),
+        MaterialPageRoute(builder: (context) => const SmartClosetUI()),
       );
     } else {
       _showErrorDialog('로그인 실패: 이메일이나 비밀번호를 확인하세요.');
     }
+
     setState(() {
       isLoading = false;
     });
@@ -110,13 +112,11 @@ class _LoginViewState extends State<LoginView> {
                 color: Colors.blue,
                 child: Center(
                   child: isLoading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white,
-                        )
+                      ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
-                          '로그인하기',
-                          style: TextStyle(color: Colors.white),
-                        ),
+                    '로그인하기',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ),

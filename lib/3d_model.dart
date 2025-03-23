@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 
-void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: ModelLoad(),
-  ));
-}
+// void main() {
+//   runApp(MaterialApp(
+//     debugShowCheckedModeBanner: false,
+//     home: ModelLoad(),
+//   ));
+// }
 
 class ModelLoad extends StatelessWidget {
   const ModelLoad({super.key});

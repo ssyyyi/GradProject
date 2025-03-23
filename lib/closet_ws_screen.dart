@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'config.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:wearly/config.dart';
 
 class ClosetContentScreen extends StatefulWidget {
   const ClosetContentScreen({super.key});
@@ -15,67 +15,93 @@ class _ClosetContentScreenState extends State<ClosetContentScreen> {
   List<Map<String, dynamic>> clothingItems = [];
   bool isLoading = true;
   bool isClosetOpen = false;
+  WebSocketChannel? channel;
   String? userId;
 
   @override
   void initState() {
     super.initState();
-    _loadUserIdAndFetchData();
+    _initWebSocket();
   }
 
-  Future<void> _loadUserIdAndFetchData() async {
+  Future<void> _initWebSocket() async {
     final prefs = await SharedPreferences.getInstance();
     userId = prefs.getString('userId');
-    print('👕 옷장에서 불러온 userId: $userId');
-
     if (userId == null) {
-      setState(() {
-        isLoading = false;
-      });
+      print("userId 없음");
+      setState(() => isLoading = false);
       return;
     }
 
-    await fetchClothingItems();
-  }
-
-  // 서버에서 옷장 데이터를 가져오는 함수
-  Future<void> fetchClothingItems() async {
-    final String apiUrl = '$serverUrl/tablet/images?userId=$userId';
-
     try {
-      final response = await http.get(Uri.parse(apiUrl));
-      print('👗 Server Response: ${response.body}');
+      final wsUrl = '$wsBaseUrl';
+      channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+      print('WebSocket 연결됨, user_id 전송: $userId');
+      channel!.sink.add(jsonEncode({'type': "closet",'user_id': userId}));
 
-        if (responseData['success'] == true) {
-          setState(() {
-            clothingItems = List<Map<String, dynamic>>.from(responseData['data']);
-            isLoading = false;
-          });
-        } else {
-          setState(() {
-            isLoading = false;
-          });
-          print('❗ Error: ${responseData['error']}');
-        }
-      } else {
-        throw Exception('❌ Failed to fetch data. Status code: ${response.statusCode}');
-      }
+      channel!.stream.listen(
+            (message) {
+          print('옷장 데이터 수신: $message');
+          try {
+            final decoded = jsonDecode(message);
+
+            if (decoded['action'] == 'refresh') {
+              print('🔄 새로고침 요청 수신');
+              _requestClosetData();
+              return;
+            }
+
+            if (decoded['image_urls'] != null && decoded['image_urls'] is List) {
+              setState(() {
+                clothingItems = List<String>.from(decoded['image_urls'])
+                    .map((url) => {'image_url': url})
+                    .toList();
+                isLoading = false;
+              });
+            } else {
+              print('서버 응답 오류 또는 데이터 없음');
+            }
+          } catch (e) {
+            print('JSON 파싱 오류: $e');
+          }
+        },
+        onError: (error) {
+          print('WebSocket 오류: $error');
+          setState(() => isLoading = false);
+        },
+        onDone: () {
+          print('WebSocket 연결 종료');
+        },
+      );
     } catch (e) {
-      print('❌ Error fetching clothing items: $e');
-      setState(() {
-        isLoading = false;
-      });
+      print('WebSocket 연결 실패: $e');
+      setState(() => isLoading = false);
     }
   }
 
-  // 옷장 열기/닫기 토글
+  // 옷장 데이터 요청용 함수
+  Future<void> _requestClosetData() async {
+    if (userId != null && channel != null) {
+      print('🔁 옷장 데이터 재요청');
+      channel!.sink.add(jsonEncode({'type': 'closet', 'user_id': userId}));
+    }
+  }
+
   void toggleCloset() {
     setState(() {
       isClosetOpen = !isClosetOpen;
     });
+
+    if (isClosetOpen) {
+      _requestClosetData();
+    }
+  }
+
+  @override
+  void dispose() {
+    channel?.sink.close();
+    super.dispose();
   }
 
   @override
@@ -86,32 +112,18 @@ class _ClosetContentScreenState extends State<ClosetContentScreen> {
       );
     }
 
-    if (userId == null) {
-      return const Center(
-        child: Text("사용자 정보를 불러올 수 없습니다."),
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("My Closet"),
-        backgroundColor: Colors.blueGrey,
-      ),
+      //appBar: AppBar(title: const Text("My Closet")),
       body: Center(
         child: isClosetOpen
             ? RefreshIndicator(
-          onRefresh: fetchClothingItems,
+          onRefresh: _requestClosetData,
           child: clothingItems.isEmpty
               ? ListView(
             children: const [
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    "옷 리스트가 없습니다.",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
-                  ),
-                ),
+              Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: Text("옷 리스트가 없습니다.")),
               ),
             ],
           )
@@ -132,11 +144,8 @@ class _ClosetContentScreenState extends State<ClosetContentScreen> {
                     child: Image.network(
                       item['image_url'],
                       fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
                     ),
                   ),
-                  const SizedBox(height: 5),
                 ],
               );
             },

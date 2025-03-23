@@ -8,6 +8,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wearly/config.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
 
 // void main() async {
 //   WidgetsFlutterBinding.ensureInitialized();
@@ -52,11 +54,18 @@ class _WeatherAndOutfitScreenState extends State<WeatherAndOutfitScreen> {
   String selectedSituation = "CasualMeeting";
   List<Map<String, dynamic>> recommendedOutfits = [];
   bool isLoading = false;
+  WebSocketChannel? fittingChannel;
 
   @override
   void initState() {
     super.initState();
     initialize();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    fittingChannel?.sink.close();
   }
 
   Future<void> initialize() async {
@@ -111,7 +120,7 @@ class _WeatherAndOutfitScreenState extends State<WeatherAndOutfitScreen> {
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
         setState(() {
-          hourlyForecast = data['list'].sublist(0, 8);
+          hourlyForecast = data['list'].sublist(0, 6);
           dailyForecast = _groupDailyForecast(data['list']);
         });
       }
@@ -189,6 +198,57 @@ class _WeatherAndOutfitScreenState extends State<WeatherAndOutfitScreen> {
     }
   }
 
+  Future<void> sendToFittingServer(String clothImagePath) async {
+    final String wsUrl = '$wsBaseUrl';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('userId');
+
+      if (userId == null) {
+        print("사용자 ID 없음");
+        return;
+      }
+
+      final response = await Dio().post(
+        '$serverUrl/outfit/fitting',
+        data: {
+          'userId': userId,
+          'clothImagePath': clothImagePath,
+        },
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final fittedUrl = response.data['data']['image_url'];
+        print("피팅 이미지 URL: ${response.data['data']['image_url']}");
+
+        try {
+          fittingChannel ??= WebSocketChannel.connect(Uri.parse(wsUrl));
+          print("✅ WebSocket 연결 시도: $wsUrl");
+
+          final payload = jsonEncode({
+            'type': 'fitting',
+            'user_id': userId,
+            'image_url': fittedUrl,
+            'device_id': 'smartphone'
+          });
+
+          fittingChannel!.sink.add(payload);
+          print("✅ WebSocket 전송 성공: $payload"); // 🔥 이 로그 추가
+        } catch (e) {
+          print("❌ WebSocket 연결 또는 전송 중 에러: $e");
+        }
+
+      } else {
+        print("전송 실패: ${response.data['message']}");
+      }
+    } catch (e) {
+      print("전송 오류: $e");
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +313,7 @@ class _WeatherAndOutfitScreenState extends State<WeatherAndOutfitScreen> {
                 ),
                 SizedBox(height: 20),
 
-                // 👇 Expanded 안에 스크롤 가능한 영역만 남김
+                // Expanded 안에 스크롤 가능한 영역만 남김
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
@@ -314,23 +374,43 @@ class _WeatherAndOutfitScreenState extends State<WeatherAndOutfitScreen> {
                           Column(
                             children: recommendedOutfits.take(3).map((outfit) {
                               final imageUrl = outfit['image_url']?.toString() ?? '';
+                              print(imageUrl);
 
                               return Card(
-                                child: ListTile(
-                                  leading: imageUrl.isNotEmpty
-                                      ? Image.network(
-                                    imageUrl,
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Icon(Icons.broken_image),
-                                  )
-                                      : Icon(Icons.image_not_supported),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 3,
+                                child: Container(
+                                  width: 160, // 카드 너비 조절
+                                  height: 160, // 카드 높이 조절
+                                  padding: EdgeInsets.all(12),
+                                  child: Center(
+                                    child: imageUrl.isNotEmpty
+                                        ? Image.network(
+                                      imageUrl,
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __, ___) => Icon(Icons.broken_image, size: 48),
+                                    )
+                                        : Icon(Icons.image_not_supported, size: 48),
+                                  ),
                                 ),
                               );
                             }).toList(),
                           ),
-
+                        SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            final imageUrl = recommendedOutfits[0]['image_url']?.toString() ?? '';
+                            if (imageUrl.isNotEmpty) {
+                              print(imageUrl);
+                              sendToFittingServer(imageUrl);
+                            } else {
+                              print("이미지 URL이 비어 있습니다.");
+                            }
+                          },
+                          child: Text("피팅하기"),
+                        ),
                       ],
                     ),
                   ),

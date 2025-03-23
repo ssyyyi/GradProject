@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:wearly/3d_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+//import 'package:wearly/3d_model.dart';
 import 'package:wearly/chatbot.dart';
-//import 'package:wearly/closet_content_screen.dart';
-import 'package:wearly/closet_tab.dart';
+import 'package:wearly/closet_ws_screen.dart';
+//import 'package:wearly/closet_tab.dart';
+import 'package:wearly/tab_fitting.dart';
 import 'package:wearly/weather.dart';
 import 'package:wearly/Tab_login.dart';
 
@@ -22,13 +24,47 @@ class SmartClosetApp extends StatelessWidget {
   }
 }
 
-class SmartClosetUI extends StatelessWidget {
-  final String userId; // 사용자 ID 필드 추가
+class SmartClosetUI extends StatefulWidget {
+  const SmartClosetUI({super.key});
 
-  const SmartClosetUI({super.key, required this.userId});
+  @override
+  State<SmartClosetUI> createState() => _SmartClosetUIState();
+}
+
+class _SmartClosetUIState extends State<SmartClosetUI> {
+  String? userId;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedUserId = prefs.getString('userId');
+    print('📦 SharedPreferences에서 불러온 userId: $storedUserId');
+
+    setState(() {
+      userId = storedUserId;
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (userId == null) {
+      // userId가 없으면 다시 로그인 화면으로 이동
+      return const LoginView();
+    }
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -37,18 +73,15 @@ class SmartClosetUI extends StatelessWidget {
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.checkroom_sharp), text: '옷장'),
-              Tab(icon: Icon(Icons.style), text: '스타일 추천'),
+              Tab(icon: Icon(Icons.accessibility_sharp), text: '스타일 추천'),
               Tab(icon: Icon(Icons.chat), text: '챗봇'),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            ClosetContentScreen(
-              //onBack: () => Navigator.pop(context),
-              userId: userId,
-            ), // 옷장 화면
-            ModelLoad(), // 스타일 추천 화면
+            ClosetContentScreen(), // 옷장 화면
+            const ModelLoad(), // 스타일 추천 화면
             //const ChatbotScreen(), // 챗봇 화면
           ],
         ),
