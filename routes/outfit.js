@@ -8,8 +8,6 @@ const fs = require("fs");
 
 const router = express.Router();
 
-
-// /fitting 엔드포인트
 router.post("/fitting", async (req, res) => {
   const { userId, clothImagePath } = req.body;
 
@@ -21,12 +19,16 @@ router.post("/fitting", async (req, res) => {
   }
 
   try {
-    const pythonPath = process.env.PYTHON_PATH || 'C:\\Python312\\python.exe';
-    const scriptPath = "model/run/fitting.py";
+    const serverUrl = req.protocol + '://' + req.get('host');
+    const tempUrl = "../" + clothImagePath.replace(serverUrl, '');
+    const relativeImageUrl = path.join(__dirname, tempUrl);
+
+    const pythonPath = process.env.PYTHON_PATH || "C:\\Python312\\python.exe";
+    const scriptPath = path.join(__dirname, "../model/run/fitting.py");
 
     execFile(
       pythonPath,
-      [scriptPath, clothImagePath, userId],
+      [scriptPath, "--cloth-image", relativeImageUrl, "--user-id", userId],
       { encoding: "utf8" },
       async (error, stdout, stderr) => {
         console.log("Python stdout:", stdout);
@@ -42,9 +44,28 @@ router.post("/fitting", async (req, res) => {
         }
 
         try {
-          const serverUrl = req.protocol + '://' + req.get('host');
-          const imageUrl = stdout.trim(); // Python script에서 반환된 이미지 URL
-          const fittingUrl = `${serverUrl}${imageUrl}`;
+          const response = JSON.parse(stdout.trim());
+
+          if (response.error) {
+            return res.status(400).json({
+              success: false,
+              message: response.error,
+            });
+          }
+
+          const serverUrl = req.protocol + "://" + req.get("host");
+          const fittingUrl = `${serverUrl}${response.image_url}`;
+
+          // 웹소켓으로 태블릿 클라이언트에게 메시지 전송
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({
+                user_id: userId,
+                image_url: fittingUrl,
+              }));
+            }
+          });
+
           return res.status(200).json({
             success: true,
             message: "Fitting successful",
@@ -72,7 +93,6 @@ router.post("/fitting", async (req, res) => {
   }
 });
 
-// /recommend 엔드포인트 (기존 코드 유지)
 router.get("/recommend", async (req, res) => {
   const { userId, situation, lat, lon } = req.query;
 
@@ -90,75 +110,108 @@ router.get("/recommend", async (req, res) => {
     execFile(
       pythonPath,
       [scriptPath, userId, situation, lat, lon],
-      { encoding: "utf8" }, // ✅ UTF-8 설정 추가
+      { encoding: "utf8" },
       async (error, stdout, stderr) => {
-        console.log("Python stdout:", stdout); // 🛠 Python 실행 결과 확인
-        console.log("Python stderr:", stderr); // 🛠 Python 에러 메시지 확인
-
         if (error) {
           console.error("Python 실행 오류:", error);
-          return res.status(500).json({
-            success: false,
-            message: "Error executing recommendation script",
-            error: error.message,
-          });
+          return res.status(500).json({ success: false, message: "Error executing script", error: error.message });
         }
 
         try {
           let response = JSON.parse(stdout.trim());
 
-          if (response.recommended.length === 0) {
-            return res.status(200).json({
-              success: true,
-              message: "No suitable outfit found",
-              data: [],
-            });
+          if (!response.recommended || response.recommended.length === 0) {
+            return res.status(200).json({ success: true, message: "No suitable outfits found", data: [] });
           }
 
-          // 추천받은 의상이 하나라면, 그 의상에 대해서만 처리
-          const recommendedItem = response.recommended[0]; // 첫 번째 (유일한) 아이템
+          const recommendedItems = response.recommended;
+          const itemIds = recommendedItems.map(item => item.id);
 
-          // DB에서 해당 의상의 image_url 가져오기
-          const query = "SELECT image_url FROM vision_data WHERE user_id = ? AND id = ?";
-          const [rows] = await db.execute(query, [userId, recommendedItem.id]);
+          // DB에서 image_url 가져오기
+          const placeholders = itemIds.map(() => "?").join(",");
+          const query = `SELECT id, image_url FROM vision_data WHERE user_id = ? AND id IN (${placeholders})`;
+          const [rows] = await db.execute(query, [userId, ...itemIds]);
 
-          if (rows.length > 0) {
-            // image_url이 존재하면 해당 의상과 함께 반환
-            const serverUrl = req.protocol + '://' + req.get('host');
-            const recommendUrl = `${serverUrl}${rows[0].image_url}`;
+          const imageUrlMap = {};
+          rows.forEach(row => { imageUrlMap[row.id] = row.image_url; });
 
-            return res.status(200).json({
-              success: true,
-              message: "Recommended outfit retrieved successfully",
-              data: {
-                id: recommendedItem.id,
-                image_url: recommendUrl, // DB에서 가져온 image_url
-              },
-            });
-          } else {
-            return res.status(404).json({
-              success: false,
-              message: "Image not found for recommended outfit",
-            });
-          }
+          // 추천 리스트 저장 (서버 메모리 또는 Redis 활용 가능)
+          const serverUrl = req.protocol + "://" + req.get("host");
+          const recommendedData = recommendedItems.map(item => ({
+            id: item.id,
+            category: item.category,
+            predicted_style: item.predicted_style,
+            image_url: imageUrlMap[item.id] ? `${serverUrl}${imageUrlMap[item.id]}` : null,
+          }));
+
+          // 현재 추천할 첫 번째 의상 + 나머지는 후보군
+          const firstRecommendation = recommendedData.shift(); // 첫 번째 아이템
+          const remainingRecommendations = recommendedData; // 나머지 리스트
+
+          // 후보 리스트를 서버 캐시에 저장 (Redis 또는 서버 메모리에 저장 가능)
+          global.recommendationCache = { userId, remainingRecommendations };
+
+          return res.status(200).json({
+            success: true,
+            message: "Recommended outfit retrieved successfully",
+            data: firstRecommendation, // 첫 번째 추천 아이템만 전달
+          });
+
         } catch (parseError) {
           console.error("Python 응답 파싱 오류:", parseError);
-          console.error("🚨 실제 Python 출력:", stdout); // 🛠 실제 출력 확인
-          return res.status(500).json({
-            success: false,
-            message: "Error parsing recommendation script output",
-            error: parseError.message,
-          });
+          return res.status(500).json({ success: false, message: "Error parsing script output", error: parseError.message });
         }
       }
     );
   } catch (error) {
     console.error("Error getting recommendations:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error retrieving recommended outfit",
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, message: "Error retrieving recommended outfit", error: error.message });
+  }
+});
+
+router.post("/feedback", async (req, res) => {
+  const { userId, itemId, feedback } = req.body; // feedback: "like" or "dislike"
+
+  if (!userId || !itemId || !feedback) {
+    return res.status(400).json({ success: false, message: "Missing parameters" });
+  }
+
+  try {
+    let preferenceChange = feedback === "like" ? 1 : -1;
+    
+    // 1️⃣ vision_data의 preference 업데이트
+    const updateQuery = `
+      UPDATE vision_data 
+      SET preference = preference + ?, feedback_count = feedback_count + 1 
+      WHERE user_id = ? AND id = ?`;
+
+    await db.execute(updateQuery, [preferenceChange, userId, itemId]);
+
+    // 2️⃣ 해당 스타일의 평균 preference_score 업데이트
+    const avgQuery = `
+      SELECT predicted_style, AVG(preference) AS avg_pref 
+      FROM vision_data 
+      WHERE user_id = ? 
+      GROUP BY predicted_style`;
+
+    const [rows] = await db.execute(avgQuery, [userId]);
+
+    // 3️⃣ user_preferences 테이블 업데이트
+    for (const row of rows) {
+      const { predicted_style, avg_pref } = row;
+      const updatePrefQuery = `
+        INSERT INTO user_preferences (user_id, style, preference_score)
+        VALUES (?, ?, ?) 
+        ON DUPLICATE KEY UPDATE preference_score = ?`;
+      
+      await db.execute(updatePrefQuery, [userId, predicted_style, avg_pref, avg_pref]);
+    }
+
+    return res.status(200).json({ success: true, message: "Feedback recorded and preference updated" });
+
+  } catch (error) {
+    console.error("Error processing feedback:", error);
+    return res.status(500).json({ success: false, message: "Error processing feedback", error: error.message });
   }
 });
 
