@@ -3,13 +3,13 @@ const cors = require('cors');
 const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
-const db = require('./config/db'); // 데이터베이스 연결 추가
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 require('dotenv').config();
+const db = require("./config/db");
 
 // Middleware
 app.use(cors());
@@ -17,8 +17,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// WebSocket
+// 웹소켓 연결 처리
 wss.on('connection', (ws, req) => {
+  // req.socket.remoteAddress를 사용하여 클라이언트 IP를 가져옵니다.
   const clientIp = req.socket.remoteAddress;
   console.log(`WebSocket 연결됨 - 클라이언트 IP: ${clientIp}`);
 
@@ -30,17 +31,14 @@ wss.on('connection', (ws, req) => {
       // 메시지 파싱 (예: { "user_id": 1 })
       const data = JSON.parse(message);
 
-      // user_id가 있는지 확인
       if (data.user_id) {
-        // 데이터베이스에서 image_url 조회
-        const [rows] = await db.query(
-          'SELECT image_url FROM users WHERE user_id = ?',
-          [data.user_id]
-        );
+        // 데이터베이스에서 user_id로 사용자 정보 조회
+        const [rows] = await db.query('SELECT image_url FROM vision_data WHERE user_id = ?', [data.user_id]);
 
         if (rows.length > 0) {
-          const serverUrl = req.protocol + '://' + req.get('host');
-          const imageUrl = serverUrl+rows[0].image_url;
+          // 서버 URL 생성 (req.protocol과 req.get()을 사용할 수 없음)
+          const serverUrl = `http://${req.headers.host}`; // 또는 https를 사용할 경우 "https"로 설정
+          const imageUrl = serverUrl + rows[0].image_url;
 
           // 클라이언트에게 image_url 전송
           ws.send(JSON.stringify({ user_id: data.user_id, image_url: imageUrl }));
@@ -49,7 +47,6 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify({ error: 'User not found' }));
         }
       } else {
-        // user_id가 없는 경우
         ws.send(JSON.stringify({ error: 'Invalid message format' }));
       }
     } catch (error) {
