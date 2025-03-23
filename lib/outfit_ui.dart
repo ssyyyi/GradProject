@@ -11,23 +11,6 @@ import 'package:wearly/config.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 
-// void main() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-//   await initializeDateFormatting('ko', null);
-//   runApp(MyApp());
-// }
-//
-// class MyApp extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       debugShowCheckedModeBanner: false,
-//       theme: ThemeData.light(),
-//       home: WeatherAndOutfitScreen(),
-//     );
-//   }
-// }
-
 class WeatherAndOutfitScreen extends StatefulWidget {
   @override
   _WeatherAndOutfitScreenState createState() => _WeatherAndOutfitScreenState();
@@ -236,7 +219,7 @@ class _WeatherAndOutfitScreenState extends State<WeatherAndOutfitScreen> {
           });
 
           fittingChannel!.sink.add(payload);
-          print("✅ WebSocket 전송 성공: $payload"); // 🔥 이 로그 추가
+          print("✅ WebSocket 전송 성공: $payload");
         } catch (e) {
           print("❌ WebSocket 연결 또는 전송 중 에러: $e");
         }
@@ -281,7 +264,7 @@ class _WeatherAndOutfitScreenState extends State<WeatherAndOutfitScreen> {
                                 style: TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
                             SizedBox(width: 10),
                             weatherIcon.isNotEmpty
-                                ? Icon(Icons.wb_sunny, size: 50, color: Colors.orange) //Image.network(weatherIcon, width: 50, height: 50)
+                                ? Image.network(weatherIcon, width: 50, height: 50)
                                 : Icon(Icons.wb_sunny, size: 50, color: Colors.orange),
                           ],
                         ),

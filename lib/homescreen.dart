@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firstscreen.dart';
-import 'closet_screen.dart';
+import 'closet_screen_phone.dart';
 import 'package:wearly/chatbot.dart';
 import 'package:provider/provider.dart';
 import 'package:wearly/state_management/closet_provider.dart';

@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-//import 'package:wearly/3d_model.dart';
-import 'package:wearly/chatbot.dart';
 import 'package:wearly/closet_ws_screen.dart';
-//import 'package:wearly/closet_tab.dart';
 import 'package:wearly/tab_fitting.dart';
-import 'package:wearly/weather.dart';
 import 'package:wearly/Tab_login.dart';
 
 void main() {
