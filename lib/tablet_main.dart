@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wearly/closet_ws_screen.dart';
+import 'package:wearly/history.dart';
 import 'package:wearly/tab_fitting.dart';
 import 'package:wearly/Tab_login.dart';
 
@@ -65,20 +66,20 @@ class _SmartClosetUIState extends State<SmartClosetUI> {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('스마트 옷장'),
+          title: const Text('SmartCloset'),
           bottom: const TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.checkroom_sharp), text: '옷장'),
-              Tab(icon: Icon(Icons.accessibility_sharp), text: '스타일 추천'),
-              Tab(icon: Icon(Icons.chat), text: '챗봇'),
+              Tab(icon: Icon(Icons.checkroom_sharp), text: 'closet'),
+              Tab(icon: Icon(Icons.accessibility_sharp), text: 'style'),
+              Tab(icon: Icon(Icons.history), text: 'history'),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            ClosetContentScreen(), // 옷장 화면
-            const ModelLoad(), // 스타일 추천 화면
-            //const ChatbotScreen(), // 챗봇 화면
+            ClosetContentScreen(),
+            const ModelLoad(),
+            const FittingHistoryScreen(),
           ],
         ),
       ),

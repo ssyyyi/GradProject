@@ -89,7 +89,6 @@ class _ClosetScreenState extends State<ClosetScreen> {
             TextButton(
               child: const Text("저장"),
               onPressed: () async {
-                Navigator.of(context).pop();
 
                 final response = await Dio().put(
                   '$serverUrl/closet/modify',
@@ -102,13 +101,13 @@ class _ClosetScreenState extends State<ClosetScreen> {
                 );
 
                 if (response.statusCode == 200) {
-                  print("✅ 수정 완료");
+                  print("수정 완료");
                   final closetProvider = Provider.of<ClosetProvider>(context, listen: false);
                   await closetProvider.loadFromServer();
-                  setState(() {});
+                  Navigator.of(context).pop();
                   // 갱신
                 } else {
-                  print("❌ 수정 실패: ${response.data}");
+                  print("수정 실패: ${response.data}");
                 }
               },
             ),
@@ -187,13 +186,13 @@ class _ClosetScreenState extends State<ClosetScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final closetProvider = Provider.of<ClosetProvider>(context);
+    final closetProvider = context.watch<ClosetProvider>();
 
     return Stack(
       children: [
         RefreshIndicator(
           onRefresh: () async {
-            await closetProvider.loadFromServer(); // 새로고침 시 서버에서 다시 불러오기
+            await closetProvider.loadFromServer();
           },
           child: GridView.builder(
             padding: const EdgeInsets.all(10),
@@ -244,7 +243,7 @@ class _ClosetScreenState extends State<ClosetScreen> {
                       right: 5,
                       child: GestureDetector(
                         onTap: () => closetProvider.removeImage(index),
-                        child: const Icon(Icons.remove_circle, color: Colors.red),
+                        child: const Icon(Icons.remove_circle, color: Colors.grey),
                       ),
                     ),
                   ],

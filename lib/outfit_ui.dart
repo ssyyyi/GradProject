@@ -197,6 +197,7 @@ class _WeatherAndOutfitScreenState extends State<WeatherAndOutfitScreen> {
         data: {
           'userId': userId,
           'clothImagePath': clothImagePath,
+          'situation': selectedSituation,
         },
         options: Options(
           headers: {'Content-Type': 'application/json'},

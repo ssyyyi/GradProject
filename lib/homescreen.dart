@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wearly/history.dart';
 import 'firstscreen.dart';
 import 'closet_screen_phone.dart';
 import 'package:wearly/chatbot.dart';
@@ -83,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> _screens = [
       ClosetScreen(userId: _currentUserId),
       WeatherAndOutfitScreen(),
-      Center(child: Text('추천 기록 페이지', style: TextStyle(fontSize: 20))),
+      FittingHistoryScreen(),
     ];
 
     return Scaffold(
