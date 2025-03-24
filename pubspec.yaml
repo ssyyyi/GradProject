@@ -96,12 +96,11 @@ flutter:
     - assets/models/collada_tpose.glb
     - assets/models/standing_collada.glb
     - assets/images/avatarF.png
-    - assets/clothes/green_knit.png
-    - assets/clothes/slacks.png
-    - assets/clothes/jeans.png
-    - assets/clothes/long_skirt.png
-    - assets/clothes/mini_skirt.png
-    - assets/clothes/training.png
+    - assets/clothes/cloth_1.jpg
+    - assets/clothes/cloth_2.jpg
+    - assets/clothes/cloth_3.jpg
+    - assets/clothes/cloth_4.jpg
+    - assets/clothes/cloth_5.jpg
     - assets/avatarF_keypoints.json
     - assets/models/test.glb
 
@@ -132,6 +131,26 @@ flutter:
   #       - asset: fonts/TrajanPro.ttf
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
-  #
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/Pretendard-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/Pretendard-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/Pretendard-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Pretendard-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Pretendard-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Pretendard-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Pretendard-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Pretendard-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Pretendard-Black.ttf
+          weight: 900
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

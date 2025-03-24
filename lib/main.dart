@@ -61,7 +61,7 @@ class _MyAppState extends State<MyApp> {
 
     return MaterialApp(
       title: 'WEarly',
-      theme: ThemeData(primarySwatch: Colors.blueGrey),
+      theme: ThemeData(primarySwatch: Colors.blueGrey, fontFamily: "Pretendard",),
       home: _userId != null ? HomeScreen(userId: _userId!) : const FirstScreen(),
       routes: {
         '/home': (context) {
