@@ -1,3 +1,4 @@
+
 # GradProject
 
 ## 프로젝트 개요
@@ -39,3 +40,5 @@ GradProject/
 ├── README.md                  # 프로젝트 설명
 └── server.js                  # 서버 설정 및 실행
 ```
+
+
